@@ -1,7 +1,16 @@
+const fs = require('fs');
+const path = require('path');
 const { animals } = require('./data/animals');
 const express = require('express');
+const { allowedNodeEnvironmentFlags } = require('process');
 const PORT = process.env.PORT || 3001;
 const app = express();
+
+//parse incoming string or array data 11.2.5
+app.use(express.urlencoded({ extended: true}));
+
+//parse incoming JSON data 11.2.5
+app.use(express.json());
 
 // 11.1.5
 // filterByQuery()
@@ -66,6 +75,52 @@ app.get('/api/animals/:id', (req, res) => {
     } else {
       res.send(404);
     }
+});
+
+function createNewAnimal(body, animalsArray) {
+  const animal = body;
+  animalsArray.push(animal);
+  // our function's main code will go here
+  fs.writeFileSync(
+    path.join(__dirname, './data/animals.json'),
+    JSON.stringify({ animals: animalsArray }, null, 2)
+  );
+  // finished code to post route for response
+  return body;
+}
+
+function validateAninmal(animal) {
+  if (!animal.name || typeof animal.name !== 'string') {
+    return false;
+  }
+  if (!animal.species || typeof animal.species !== 'string') {
+    return false;
+  }
+  if (!animal.diet || typeof animal.diet !== 'string') {
+    return false;
+  }
+  if (!animal.personalityTraits || !Array.isArray(animal.personalityTraits)) {
+    return false;
+  }
+  return true;
+}
+
+
+// defined a route that listens for POST requests - accpet data from client 11.2.3
+app.post('/api/animals', (req, res) => {
+  // set id based on what the next index of the array will be
+  req.body.id = animals.length.toString();
+
+  // if any data in req.data is incorrect, send 400 error back
+  if (!validateAninmal(req.body)) {
+    res.status(400).send('The animal is not properly formatted.');
+  } else {
+
+  // add animal to json file and animals array in this function
+  const animal = createNewAnimal(req.body, animals);
+
+  res.json(animal);
+  }
 });
 
 app.listen(PORT, () => {
